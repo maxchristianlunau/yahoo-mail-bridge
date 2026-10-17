@@ -43,20 +43,43 @@ def _decode(value):
     return out
 
 
+def _strip_html(html):
+    import re
+
+    text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", html)
+    text = re.sub(r"(?s)<[^>]*>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
 def _body_text(msg):
+    plain, html = "", ""
     if msg.is_multipart():
         for part in msg.walk():
-            if part.get_content_type() == "text/plain" and "attachment" not in (
-                part.get("Content-Disposition") or ""
-            ):
-                return part.get_payload(decode=True).decode(
-                    part.get_content_charset() or "utf-8", errors="replace"
-                )
-        return ""
-    payload = msg.get_payload(decode=True)
-    if payload is None:
-        return str(msg.get_payload())
-    return payload.decode(msg.get_content_charset() or "utf-8", errors="replace")
+            if "attachment" in (part.get("Content-Disposition") or ""):
+                continue
+            payload = part.get_payload(decode=True)
+            if payload is None:
+                continue
+            text = payload.decode(
+                part.get_content_charset() or "utf-8", errors="replace"
+            )
+            if part.get_content_type() == "text/plain" and not plain:
+                plain = text
+            elif part.get_content_type() == "text/html" and not html:
+                html = text
+    else:
+        payload = msg.get_payload(decode=True)
+        if payload is None:
+            return str(msg.get_payload())
+        text = payload.decode(msg.get_content_charset() or "utf-8", errors="replace")
+        if msg.get_content_type() == "text/html":
+            html = text
+        else:
+            plain = text
+    if plain.strip():
+        return plain
+    return _strip_html(html)
 
 
 def list_folders():
