@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: yahoo-mail-bridge
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: YAHOO_EMAIL
+        sync: false
+      - key: YAHOO_APP_PASSWORD
+        sync: false
+      - key: API_TOKEN
+        generateValue: true
